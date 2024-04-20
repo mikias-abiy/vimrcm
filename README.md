@@ -50,7 +50,7 @@ OPTIONS
   -p <path/to/vimrc>        Path of configuration to use
   -a <path/to/vimrc> <name> Adds new configuration
   -r <name>                 Removes configuration
-  -c                        List of available configurations
+  -l                        List of available configurations
   -h                        help for vimrc
 
 SOURCE:
@@ -126,5 +126,10 @@ Using your newly added configuration.
 ```
 $ vimrcm -n some_name [file...] [vim_option...]
 ```
+
+## Features Coming soon
+
+> A standardized vimrc configuration for known languages and frameworks
+> Auto detaction of configuration for a given file.
 
 ### Thank You for Visting !!!
