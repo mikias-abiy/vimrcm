@@ -130,6 +130,7 @@ $ vimrcm -n some_name [file...] [vim_option...]
 ## Features Coming soon
 
 > A standardized vimrc configuration for known languages and frameworks
+
 > Auto detaction of configuration for a given file.
 
 ### Thank You for Visting !!!
