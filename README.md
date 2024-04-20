@@ -25,7 +25,7 @@ Now you are good to go.
 
 ## 3. Usage.
 
-## 3.1 Help message
+### 3.1 Help message
 
 Before we dive in looking at the help message might give you some insight
 ```
@@ -124,7 +124,7 @@ some_name 	some_name_vimrc
 
 Using your newly added configuration.
 ```
-$ vimrcm -n some_name file(s)
+$ vimrcm -n some_name [file...] [vim_option...]
 ```
 
 ### Thank You for Visting !!!
