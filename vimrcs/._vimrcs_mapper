@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+_DEFAULT_VIMRCS=( '(py py_vimrc Python)' '(sh sh_vimrc Bash)' )
+_USER_VIMRCS=( '( tst tst_vimrc tst )' '( tset tset_vimrc tset )' '( test test_vimrc test )' )

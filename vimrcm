@@ -1,0 +1,456 @@
+#!/usr/bin/bash
+
+
+# The directory where vimrc configuration files are stored.
+_VIMRCS_PATH="$HOME/._vimrcs/"
+
+# Bash script that map vimrc file to a name that will used to specify
+# as an option argument.
+_VIMRCS_MAPPER="$_VIMRCS_PATH/._vimrcs_mapper"
+
+# The configuration file of vimrcm this program.
+_VIMRCMRC="$HOME/._vimrcmrc"
+
+# To share return values among calles to local functions
+_VIMRCM_RETURNS=""
+
+
+# Text formaters
+
+underline="\e[4m"
+bold="\e[1m"
+red="\e[31m"
+end="\e[0m"
+
+
+###########################################################
+# err:
+#   Prints an arbitrary list of string arguments into stderr.
+#   The first argument given will be the error message the 
+#   rest might suggestion on how to fix it or other information
+#   that might be related to the error.
+# Globals:
+#   None
+# Arguments:
+#   error: The description of the error occured.
+#   $@: Additional information about the error.
+###########################################################
+err() {
+  printf "> [${red}Error${end}]: $1\n" >&2
+  
+  for arg in "${@:2}";
+  do
+    printf "> $arg\n" >&2
+  done;
+}
+
+
+###########################################################
+# load_externals:
+#   Checks the existence of configuration files for the program
+#   and loads them.
+# Globals:
+#   _VIMRCMRC
+#   _VIMRCS_MAPPER
+# Arguments:
+#   None
+###########################################################
+load_externals() {
+  if [[ -e "$_VIMRCMRC" && -e "$_VIMRCS_MAPPER" ]];
+  then
+    source "$_VIMRCMRC"
+    source "$_VIMRCS_MAPPER"
+  else
+    err "vimrcm not installed."\
+        "Run the install.sh script that is found in the repository you cloned."
+    exit 1
+  fi
+}
+
+
+###########################################################
+# vimrc_name_to_path:
+#   maps a vimrc name passed as an option argument
+#   to a path to the file containing the configuration.
+# Globals:
+#   _DEFAULT_VIMRCS
+#   _USER_VIMRCS
+#   _VIMRCM_RETURNS
+#   _VIMRCS_PATH
+# Arguments:
+#   vimrc_name: The name of the vimrc configuration to map.
+###########################################################
+vimrc_name_to_path() {
+  local vimrc_name="$1"
+
+  local vimrcs=( "${_DEFAULT_VIMRCS[@]}" "${_USER_VIMRCS[@]}")
+  
+  for vimrc in "${vimrcs[@]}";
+  do
+    eval "vimrc_info=$vimrc"
+
+    if [[ "$vimrc_name" == "${vimrc_info[0]}" ]];
+    then
+      _VIMRCM_RETURNS="$_VIMRCS_PATH${vimrc_info[1]}"
+      return 0
+    fi;
+  done;
+
+  err "Uknown configuration $vimrc_name"\
+      "See the full list of the configuration available using -l option"
+  exit 1
+}
+
+
+###########################################################
+# open_vim:
+#   opens vim with the provided file and vimrc configuration
+# Globals:
+#   None
+# Arguments:
+#   vimrc_path: The path where the vimrc configuration file is located.
+#   filenames: The file(s) to open.
+#   vim_options: The option(s) to pass to vim.
+###########################################################
+open_vim() {
+  local vimrc_path="$1"
+  local vim_options=( "$2" )
+  local file_names=( "$3" )
+
+  local vim_command="vim -u $vimrc_path"
+
+  if [[ ${#vim_options[@]} -ne 0 ]]; then
+    for opt in "${vim_options[@]}"; do
+      opt=`echo $opt | xargs`
+      vim_command="${vim_command} ${opt}"
+    done
+  fi
+  
+  if [[ ${#vim_options[@]} -ne 0 ]]; then
+    for file in "${file_names[@]}"; do
+      file=`echo $file | xargs`
+      vim_command="${vim_command} ${file}"
+    done
+  fi
+
+  vim_command=`echo "$vim_command" | xargs`
+  echo "$vim_command"
+  $vim_command
+  exit "$?"
+}
+
+
+###########################################################
+# use_this_vimrc:
+#   open a given file with a given vimrc confiuratoin name or
+#   path to a given vimrc configuration file.
+# Globals:
+#   _VIMRCM_RETURNS
+# Arguments:
+#   vimrcm_option: 'p' path to the vimrc / 'n' name of the vimrc.
+#   vimrc: based on the vimrcm_option this could be a name or a path.
+#   filename: The file to open.
+#   vim_options: The options(s) to pass to vim.
+###########################################################
+use_this_vimrc() {
+  local vimrcm_option="$1"
+  local vim_options=( "$3" )
+  local file_names=( "$4" )
+  
+  if [[ "$vimrcm_option" == "p" ]]; then
+    local vimrc_path="$2"
+  elif [[ "$vimrcm_option" == "n" ]]; then
+    local vimrc_name="$2"
+    vimrc_name_to_path "$vimrc_name"
+    vimrc_path="$_VIMRCM_RETURNS"
+  fi
+  open_vim "$vimrc_path" "${vim_options[@]}" "${file_names[@]}"
+}
+
+
+###########################################################
+# save_vimrcs_mapper:
+#   Saves the update version of variables loaded from _VIMRCS_MAPPER
+#   to the _VIMRCS_MAPPER file.
+# Globals:
+#   _DEFAULT_VIMRCS
+#   _USER_VIMRCS
+#   _VIMRCS_MAPPER
+# Arguments:
+#   None
+###########################################################
+save_vimrcs_mapper() {
+  local default_vimrcs="_DEFAULT_VIMRCS=("
+
+  for vimrc in "${_DEFAULT_VIMRCS[@]}"; do
+    default_vimrcs="${default_vimrcs} '$vimrc'"
+  done
+  default_vimrcs="${default_vimrcs} )"
+
+  local user_vimrcs="_USER_VIMRCS=("
+
+  for vimrc in "${_USER_VIMRCS[@]}"; do
+    user_vimrcs="${user_vimrcs} '$vimrc'"
+  done
+  user_vimrcs="${user_vimrcs} )"
+  
+  echo "#!/usr/bin/env bash" > "$_VIMRCS_MAPPER"
+  echo "$default_vimrcs" >> "$_VIMRCS_MAPPER"
+  echo "$user_vimrcs" >> "$_VIMRCS_MAPPER"
+
+  exit 0 
+}
+
+
+###########################################################
+# add_vimrc:
+#   Adds a new vimrc configuration.
+# Globals:
+#   _VIMRCS_PATH
+#   _DEFAULT_VIMRCS
+#   _USER_VIMRCS
+# Argument:
+#   vimrc_path: The path to the vimrc configuration file.
+#   vimrc_name: The aliasing name for the configuration file.
+###########################################################
+add_vimrc() {
+  local vimrc_path="$1"
+  local vimrc_name="$2"
+  
+  local vimrcs=( "${_DEFAULT_VIMRCS[@]}" "${_USER_VIMRCS[@]}")
+
+  for vimrc in "${vimrcs[@]}";
+  do
+    eval "vimrc_info=$vimrc"
+
+    if [[ "$vimrc_name" == "${vimrc_info[0]}" ]];
+    then
+      err "Name $vimrc_name is duplicate"\
+          "Use another one or append a number to the name"
+      exit 1
+    fi;
+  done;
+
+  if [[ -e "$vimrc_path" ]]; then
+    cp "$vimrc_path" "${_VIMRCS_PATH}${vimrc_name}_vimrc"
+  else
+    err "File $vimrc_path not found"
+    exit 1
+  fi
+
+  _USER_VIMRCS+=( "( $vimrc_name ${vimrc_name}_vimrc $vimrc_name )" )
+
+  echo "Name: $vimrc_name"
+  echo "Path: ${_VIMRCS_PATH}${vimrc_name}_vimrc"
+  echo "Configuration added successfully"
+
+  save_vimrcs_mapper
+}
+
+
+###########################################################
+# remove_vimrc:
+#   removes a vimrc configuration.
+# Globals:
+#   _USER_VIMRCS
+#   _VIMRCS_PATH
+# Arguments:
+#   vimrc_name: The name of the vimrc configuration to remove
+###########################################################
+remove_vimrc() {
+  local vimrc_name="$1"
+
+  local len="${#_USER_VIMRCS[@]}"
+  
+  for ((i = 0; i < len ; i++)); do
+    eval "vimrc_info=${_USER_VIMRCS[$i]}"
+
+    if [[ "$vimrc_name" == "${vimrc_info[0]}" ]];
+    then
+      
+      rm "${_VIMRCS_PATH}${vimrc_info[1]}" &> /dev/null
+      unset "_USER_VIMRCS[$i]"
+      echo "Name: $vimrc_name"
+      echo "Path: ${_VIMRCS_PATH}${vimrc_name}_vimrc"
+      echo "Configuration removed successfully"
+      break
+    elif [[ "$i" -eq $(( len -1 ))  ]]; then
+      err "Unknown configuration $vimrc_name"\
+          "See the full list of the configuration available using -l option"
+      exit 1
+    fi;
+  done;
+
+  save_vimrcs_mapper
+}
+
+
+###########################################################
+# list_vimrcs:
+#   Lists available list of configurations
+# Globals:
+#   _DEFAULT_VIMRCS
+#   _USER_VIMRCS
+# Arguments:
+#   None.
+###########################################################
+list_vimrcs() {
+  printf "${bold}Root Path${end}: ${underline}%s${end}\n\n" "$_VIMRCS_PATH"
+  printf "${underline}${bold}Default Configurations${end}${end}\n"
+  printf "${underline}%s${end}      \t${underline}%s${end}\n" "Name" "File"
+  for vimrc in "${_DEFAULT_VIMRCS[@]}";
+  do
+    eval "vimrc_info=$vimrc"
+    printf "%-10s\t%-20s\n" "${vimrc_info[0]}" "${vimrc_info[1]}"
+  done;
+
+  printf "\n${underline}${bold}User Configurations${end}${end}\n"
+  printf "${underline}%s${end}      \t${underline}%s${end}\n" "Name" "File"
+  for vimrc in "${_USER_VIMRCS[@]}";
+  do
+    eval "vimrc_info=$vimrc"
+    printf "%-10s\t%-20s\n" "${vimrc_info[0]}" "${vimrc_info[1]}"
+  done;
+}
+
+
+###########################################################
+# print_help:
+#   prints help message
+# Globals:
+#   None.
+# Arguments:
+#   None.
+###########################################################
+print_help() {
+  cat <<HelpText
+vimrcm v1.0.0
+
+A vimrc configruation manager.
+
+DESCRIPTION
+  vimrcm is a vimrc configuration manager that lets you manage
+  your different vimrc configurations for different languages,
+  code bases and so on.
+
+USAGE
+  $ vimrcm option option_argument(s) [file(s)...] [options_to_vim...]
+
+OPTIONS
+  option                    Description
+  -n <name>                 Name of configuration to use
+  -p <path/to/vimrc>        Path of configuration to use
+  -a <path/to/vimrc> <name> Adds new configuration
+  -r <name>                 Removes configuration
+  -l                        List of available configurations
+  -h                        help for vimrc
+
+SOURCE:
+  https://github.com/mikias-abiy/vimrcm
+HelpText
+}
+
+
+###########################################################
+# usage_err:
+#   Prints coresponding error message for the passed vimrcm
+#   option.
+# Globals:
+#   None.
+# Arguments:
+#   vimrcm_option: The option that was passed to vimrcm
+###########################################################
+usage_err() {
+  local vimrcm_option="$1"
+
+  case "$vimrcm_option" in
+    n)
+      err "Configuration name not specified"\
+          "Usage: $0 -n <name> [files...]"\
+          "Run $0 -h for more information"
+      ;;
+    p)
+      err "Configuration path not specified"\
+          "Usage: $0 -p <name> [files...]"\
+          "Run $0 -h for more information"
+      ;;
+    a)
+      err "Configuration path not specified"\
+          "Usage: $0 -a <path/to/vimrc> <name>"\
+          "Run $0 -h for more information"
+      ;;
+    r)
+      err "Configuration name not specified"\
+          "Usage: $0 -r <name>"\
+          "Run $0 -h for more information"
+      ;;
+    ?)
+      err "Unknown option '$vimrcm_option'"\
+          "Run $0 -h for more information"
+      ;;
+  esac;
+}
+
+# Loading external scripts
+load_externals
+
+while getopts ":n:p:a:r:lh" OPTION;
+do
+  vimrcm_option="$OPTION"
+  case "$OPTION" in
+    n)
+      vimrc="$OPTARG"
+      ;;
+    p)
+      vimrc="$OPTARG"
+      ;;
+    a)
+      vimrc_path="$OPTARG"
+      shift "$((OPTIND -1))"
+      vimrc_name="$1"
+
+      if [[ -z "$vimrc_name" ]]; then
+        err "Did not specify name for the configuration"\
+            "Usage: $0 -a </path/to/vimrc> <name>"\
+            "Run $0 -h for more information"
+        exit 1
+      fi
+
+      add_vimrc "$vimrc_path" "$vimrc_name"
+      ;;
+    r)
+      vimrc_name="$OPTARG"
+      remove_vimrc "$vimrc_name"
+      ;;
+    l)
+      list_vimrcs
+      exit 0
+      ;;
+    h)
+      print_help
+      exit 0
+      ;;
+    ?)
+      vimrcm_option="${1:1}"
+      usage_err "$vimrcm_option"
+      exit 1
+      ;;
+  esac;
+done;
+
+
+if [[ "$vimrcm_option" == "n" || "$vimrcm_option" == "p" ]]; then
+  shift "$((OPTIND -1))"
+  vim_opts=0
+
+  for arg in "${@}"; do
+    if [[ "${arg:0:1}" == "-" || "$vim_opts" -ne 0  ]]; then
+      vim_opts=1
+      vim_options+=( "$arg" )
+      continue
+    fi
+    file_names+=( "$arg" )
+  done;
+  
+  use_this_vimrc "$vimrcm_option" "$vimrc" "${vim_options[@]}" "${file_names[@]}"
+fi

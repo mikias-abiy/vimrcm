@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+# Initializing necessar variables with default options 
+vimrcm_option='n'
+vimrc='py'
+file_names=()
+vim_options=()
