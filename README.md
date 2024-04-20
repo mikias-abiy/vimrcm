@@ -42,8 +42,6 @@ code bases, and so on.
 USAGE
   $ vimrcm option option_argument(s) [file(s)...] [options_to_vim...]
 
-EXAMPLE
-
 OPTIONS
   option                    Description
   -n <name>                 Name of configuration to use

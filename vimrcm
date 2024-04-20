@@ -326,24 +326,24 @@ print_help() {
   cat <<HelpText
 vimrcm v1.0.0
 
-A vimrc configruation manager.
+A vimrc configuration manager.
 
 DESCRIPTION
-  vimrcm is a vimrc configuration manager that lets you manage
-  your different vimrc configurations for different languages,
-  code bases and so on.
+  vimrcm is a vimrc configuration manager that lets you manage
+  your different vimrc configurations for different languages,
+  code bases, and so on.
 
 USAGE
-  $ vimrcm option option_argument(s) [file(s)...] [options_to_vim...]
+  $ vimrcm option option_argument(s) [file(s)...] [options_to_vim...]
 
 OPTIONS
-  option                    Description
-  -n <name>                 Name of configuration to use
-  -p <path/to/vimrc>        Path of configuration to use
-  -a <path/to/vimrc> <name> Adds new configuration
-  -r <name>                 Removes configuration
-  -l                        List of available configurations
-  -h                        help for vimrc
+  option                    Description
+  -n <name>                 Name of configuration to use
+  -p <path/to/vimrc>        Path of configuration to use
+  -a <path/to/vimrc> <name> Adds a new configuration
+  -r <name>                 Removes a configuration
+  -c                        List of available configurations
+  -h                        help for vimrc
 
 SOURCE:
   https://github.com/mikias-abiy/vimrcm
